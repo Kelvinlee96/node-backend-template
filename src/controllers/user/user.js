@@ -1,7 +1,7 @@
 import { sequelize } from '../../config/index.js';
 import { User } from '../../models/index.js'
 import { v4 as uuidv4 } from 'uuid';
-import { getById } from '../../utils/index.js'
+import { getById, errorHandler } from '../../utils/index.js'
 
 async function getUserById(req, res) {
 
@@ -50,23 +50,16 @@ async function addUser(req, res) {
 	}
 }
 
-async function editUser(res, req) {
-	// console.log('res update', res)
+async function editUser(req, res, next) {
+
 	try {
 		const result = await sequelize.transaction(async (t) => {
-			console.log("in req", req)
 
-			let { id, firstName, lastName } = req.query;
-			// let userId = req.query.id;
-			// let firstName = req.query.firstName;
-			// let lastName = req.query.lastName;
+			let id = req.query.id;
 
-			console.log("userId", id);
-			// console.log("firstName", firstName)
-			// console.log("lastName", lastName)
+			let { firstName, lastName, email } = req.body;
 
-			let user = getById.findUser(userId);
-			// console.log("user", user)
+			let user = await getById.findUser(id);
 
 			if(!user) {
 				return res.status(404).send('User not found');
@@ -74,18 +67,31 @@ async function editUser(res, req) {
 
 			let updateUser = await User.update({
 				firstName: firstName,
-				lastName: lastName
-			}, { transaction: t });
+				lastName: lastName,
+				email: email,
+			}, { 
+				where: { id: id},
+				transaction: t 
+			});
 
-			return updateUser;
+			if(updateUser[0] === 0){
+				// return res.status(201)
+				throw new Error("No update performed")
+			}
+
+			const updatedUser = await getById.findUser(id, {transaction: t});
+
+			return updatedUser;
 		});
 
 		res.send(result);
 
 	} catch (err) {
-		res.status(400).send({
-			message: 'Failed to edit user'
-		})
+		// res.status(400).send({
+		// 	message: 'Failed to edit user'
+		// })
+		err.statusCode = 400
+		next(err)
 	}
 }
 
