@@ -18,6 +18,9 @@ const UserModel = sequelize.define('User', {
     email: {
         type: DataTypes.STRING,
     },
+    isDeleted: {
+        type: DataTypes.BOOLEAN,
+    },
     createdAt: {
         type: DataTypes.DATE,
     },

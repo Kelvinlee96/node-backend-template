@@ -2,6 +2,7 @@ import { sequelize } from '../../config/index.js';
 import { User } from '../../models/index.js'
 import { v4 as uuidv4 } from 'uuid';
 import { getById, errorHandler } from '../../utils/index.js'
+import { findUser } from '../../utils/getById.js';
 
 async function getUserById(req, res) {
 
@@ -56,14 +57,13 @@ async function editUser(req, res, next) {
 		const result = await sequelize.transaction(async (t) => {
 
 			let id = req.query.id;
-
-			let { firstName, lastName, email } = req.body;
-
 			let user = await getById.findUser(id);
 
 			if(!user) {
 				return res.status(404).send('User not found');
 			}
+
+			let { firstName, lastName, email } = req.body;
 
 			let updateUser = await User.update({
 				firstName: firstName,
@@ -95,10 +95,49 @@ async function editUser(req, res, next) {
 	}
 }
 
+async function deleteUser(req, res, next) {
+	try {
+		const result = await sequelize.transaction(async (t) => {
+			let id = req.query.id;
+			let user = await getById.findUser(id);
+
+			if(!user) {
+				return res.status(404).send('User not found');
+			}
+
+			let { isDeleted } = req.body;
+			
+			let disableUser = await User.update({
+				isDeleted: isDeleted
+			}, { 
+				where: { id: id},
+				transaction: t 
+			});
+
+			if(disableUser[0] === 0){
+				// return res.status(201)
+				throw new Error("Unable to disable user")
+			}
+
+			let findUser = await getById.findUser(id);
+
+			return (`"User ${findUser.firstName} ${findUser.lastName} is disable"`)
+		});
+
+		res.send(result);
+		
+
+	} catch (err) {
+		err.statusCode = 400
+		next(err)
+	}
+}
+
 
 export { 
     getUserById, 
     getAllUsers,
     addUser,
-	editUser
+	editUser,
+	deleteUser
 };
